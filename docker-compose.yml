@@ -19,8 +19,10 @@ services:
       - "127.0.0.1:9000:9000"
     environment:
       - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      test: ["CMD-SHELL", "wget --spider -q 127.0.0.1:8123/ping || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -29,10 +31,13 @@ services:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: ai_trace_otel_collector
     volumes:
-      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+      - ${PWD}/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
     ports:
       - "127.0.0.1:4317:4317"
       - "127.0.0.1:4318:4318"
+    environment:
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     depends_on:
       clickhouse:
@@ -44,7 +49,7 @@ services:
     command: python consumer.py
     environment:
       - REDIS_HOST=redis
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
     depends_on:
       redis:
         condition: service_healthy
