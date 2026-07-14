@@ -46,3 +46,21 @@ async def ingest_trace(trace: LLMTrace, x_idempotency_key: str | None = Header(d
             raise HTTPException(status_code=500, detail="Message broker insertion failed")
         
         return {"status": "ingested", "idempotency_key": x_idempotency_key}
+
+
+@app.get("/traces/{user_id}")
+async def get_user_traces(user_id: str):
+    try:
+        stream_data = redis_client.xrange("incoming_llm_traces", min="-", max="+")
+    except Exception:
+        stream_data = []
+
+    if not stream_data:
+        return []
+
+    user_traces = []
+    for _, fields in stream_data:
+        if fields.get("user_id") == user_id:
+            user_traces.append(fields)
+
+    return user_traces
