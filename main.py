@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Header, HTTPException, Request 
+from fastapi import FastAPI, Header, HTTPException
 import hashlib
 from models import LLMTrace
 from dependencies import redis_client
