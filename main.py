@@ -1,20 +1,9 @@
 from fastapi import FastAPI, Header, HTTPException, Request 
-from pydantic import BaseModel
-import redis 
-import json 
 import hashlib
+from models import LLMTrace
+from dependencies import redis_client
 
 app = FastAPI()
-
-redis_client = redis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
-
-
-class LLMTrace(BaseModel):
-    user_id: str
-    model_name: str 
-    input_tokens: int 
-    output_tokens: int 
-    latency_ms: int
 
 
 @app.post("/ingest/trace")
