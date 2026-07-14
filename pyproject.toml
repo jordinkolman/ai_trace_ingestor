@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi",
-    "uvicorn",
+    "uvicorn[standard]",
     "redis",
     "pydantic",
     "opentelemetry-api",

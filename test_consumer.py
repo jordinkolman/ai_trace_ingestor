@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 from consumer import run_consumer, process_message
 
 def test_process_message_success():
+    mock_redis = MagicMock()
     mock_tracer = MagicMock()
     mock_span = MagicMock()
     mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
@@ -15,12 +16,14 @@ def test_process_message_success():
         "latency_ms": "250"
     }
 
-    process_message(mock_tracer, "12345-0", fields)
+    process_message(mock_redis, mock_tracer, "12345-0", fields)
 
     mock_tracer.start_as_current_span.assert_called_once_with("llm_trace")
     mock_span.set_attribute.assert_any_call("user_id", "user_123")
     mock_span.set_attribute.assert_any_call("model_name", "gpt-4")
     mock_span.set_attribute.assert_any_call("input_tokens", "100")
+
+    mock_redis.publish.assert_called_once()
 
 
 def test_run_consumer_success():
@@ -48,3 +51,6 @@ def test_run_consumer_redis_failure():
     
     # Mock redis to raise an exception
     mock_redis.xread.side_effect = Exception("Redis connection lost")
+
+    with pytest.raises(Exception, match="Redis connection lost"):
+        run_consumer(mock_redis, mock_tracer, limit=1)

@@ -5,6 +5,9 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
       - "127.0.0.1:8001:8001"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s 
@@ -21,6 +24,8 @@ services:
       - CLICKHOUSE_DB=default
       - CLICKHOUSE_USER=${CLICKHOUSE_USER}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q 127.0.0.1:8123/ping || exit 1"]
       interval: 5s
@@ -42,6 +47,30 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+  
+  ingestor:
+    build: .
+    container_name: ai_trace_ingestor
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - REDIS_HOST=redis 
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  websocket-streamer:
+    build: .
+    container_name: ai_trace_websocket_streamer
+    command: uvicorn ws_server:app --host 0.0.0.0 --port 8002
+    ports:
+      - "127.0.0.1:8002:8002"
+    environment:
+      - REDIS_HOST=redis 
+    depends_on:
+      redis:
+        condition: service_healthy
 
   consumer:
     build: .
@@ -55,3 +84,7 @@ services:
         condition: service_healthy
       otel-collector:
         condition: service_started
+
+volumes:
+  redis_data:
+  clickhouse_data:

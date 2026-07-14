@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from opentelemetry import trace
@@ -14,7 +15,7 @@ def setup_tracer():
     trace.set_tracer_provider(provider)
     return trace.get_tracer("redis-stream-consumer")
 
-def process_message(tracer, message_id, fields):
+def process_message(redis_db, tracer, message_id, fields):
     user_id = fields.get("user_id", "unknown")
     model_name = fields.get("model_name", "unknown")
     
@@ -24,6 +25,9 @@ def process_message(tracer, message_id, fields):
         for key, val in fields.items():
             if key not in ["user_id", "model_name"]:
                 span.set_attribute(key, str(val))
+
+        live_payload = {"message_id": message_id, **fields}
+        redis_db.publish("live_traces", json.dumps(live_payload))
 
 def run_consumer(redis_client, tracer, stream_name="incoming_llm_traces", limit=None):
     last_id = "0-0"
@@ -39,7 +43,7 @@ def run_consumer(redis_client, tracer, stream_name="incoming_llm_traces", limit=
 
             for stream, messages in events:
                 for message_id, fields in messages:
-                    process_message(tracer, message_id, fields)
+                    process_message(redis_client, tracer, message_id, fields)
                     last_id = message_id
                     processed_count += 1
                     
