@@ -1,10 +1,10 @@
 import os
 import time
-from redis import Redis
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from dependencies import redis_client
 
 def setup_tracer():
     provider = TracerProvider()
@@ -52,7 +52,5 @@ def run_consumer(redis_client, tracer, stream_name="incoming_llm_traces", limit=
                 raise e
 
 if __name__ == "__main__":
-    redis_host = os.getenv("REDIS_HOST", "localhost")
-    redis_client = Redis(host=redis_host, port=6379, decode_responses=True)
     tracer = setup_tracer()
     run_consumer(redis_client, tracer)
